@@ -29,13 +29,38 @@ document.addEventListener("DOMContentLoaded", () => {
             <strong>Participants:</strong>
             <ul class="participants-list">
               ${details.participants.length
-                ? details.participants.map(p => `<li class="participant-item">${p}</li>`).join("")
+                ? details.participants.map(p => `
+                  <li class="participant-item">
+                    <span class="participant-email">${p}</span>
+                    <span class="delete-participant" title="Remove" data-activity="${name}" data-email="${p}">&#128465;</span>
+                  </li>`).join("")
                 : `<li class="no-participants">No participants yet</li>`}
             </ul>
           </div>
         `;
 
         activitiesList.appendChild(activityCard);
+
+        // Add delete handler for participants
+        activityCard.querySelectorAll('.delete-participant').forEach(icon => {
+          icon.addEventListener('click', async (e) => {
+            const activity = icon.getAttribute('data-activity');
+            const email = icon.getAttribute('data-email');
+            if (confirm(`Remove ${email} from ${activity}?`)) {
+              try {
+                const res = await fetch(`/activities/${activity}/unregister`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email })
+                });
+                if (!res.ok) throw new Error(await res.text());
+                fetchActivities();
+              } catch (err) {
+                alert('Failed to remove participant: ' + err);
+              }
+            }
+          });
+        });
 
         // Add option to select dropdown
         const option = document.createElement("option");
@@ -70,6 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
